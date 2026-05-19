@@ -232,6 +232,7 @@
     "webpack-cli": "^5.1.1"
   },
   "dependencies": {
+    "@vscode/vsce": "^3.9.1",
     "axios": "^1.4.0",
     "p-limit": "^4.0.0",
     "turndown": "^7.1.2"
