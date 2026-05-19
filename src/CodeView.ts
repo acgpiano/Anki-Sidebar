@@ -302,8 +302,9 @@ export class AnkiViewViewProvider implements vscode.WebviewViewProvider {
 
 	public async answerCard(ease: number, autoEase: boolean = false) {
 		// console.log("CodeView: answerCard: " + ease);
-		await this.showAnswer();
-		let easeList = (await this._ankiConnect.api.graphical.guiCurrentCard()).result.buttons;
+		let currentCard = await this._ankiConnect.api.graphical.guiCurrentCard();
+		let easeList = currentCard.result.buttons;
+		let currentCardId = currentCard.result.cardId;
 
 		if (easeList.includes(ease)) {
 			await this._ankiConnect.api.graphical.guiAnswerCard(ease);
@@ -312,6 +313,19 @@ export class AnkiViewViewProvider implements vscode.WebviewViewProvider {
 		} else {
 			return false;
 		}
+
+		// 等待Anki切换到下一张卡片
+		let maxRetries = 20;
+		let retryCount = 0;
+		while (retryCount < maxRetries) {
+			await new Promise(resolve => setTimeout(resolve, 50));
+			let newCard = await this._ankiConnect.api.graphical.guiCurrentCard();
+			if (newCard.result.cardId !== currentCardId) {
+				break;
+			}
+			retryCount++;
+		}
+
 		await this.showQuestion();
 		return true;
 	}
