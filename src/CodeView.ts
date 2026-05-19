@@ -312,7 +312,7 @@ export class AnkiViewViewProvider implements vscode.WebviewViewProvider {
 		} else {
 			return false;
 		}
-		this.showQuestion();
+		await this.showQuestion();
 		return true;
 	}
 
