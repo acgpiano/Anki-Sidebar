@@ -148,6 +148,49 @@ export class AnkiViewViewProvider implements vscode.WebviewViewProvider {
 		return newHtml
 	}
 
+	private formatReviewTime(timeStr: string): string {
+		// 移除 "< " 前缀
+		timeStr = timeStr.replace(/^< /, '');
+
+		// 解析时间字符串
+		const match = timeStr.match(/(\d+(?:\.\d+)?)\s*([a-z]+)/i);
+		if (!match) return timeStr;
+
+		const value = parseFloat(match[1]);
+		const unit = match[2].toLowerCase();
+
+		// 转换为分钟
+		let minutes = 0;
+		if (unit.startsWith('s')) {
+			minutes = value / 60;
+		} else if (unit.startsWith('m')) {
+			minutes = value;
+		} else if (unit.startsWith('h')) {
+			minutes = value * 60;
+		} else if (unit.startsWith('d')) {
+			minutes = value * 24 * 60;
+		} else if (unit.startsWith('mo')) {
+			minutes = value * 30 * 24 * 60;
+		} else if (unit.startsWith('y')) {
+			minutes = value * 365 * 24 * 60;
+		}
+
+		// 格式化输出
+		if (minutes < 1) {
+			return `<${Math.round(minutes * 60)}s`;
+		} else if (minutes < 60) {
+			return `${Math.round(minutes)}m`;
+		} else if (minutes < 24 * 60) {
+			return `${Math.round(minutes / 60)}h`;
+		} else if (minutes < 30 * 24 * 60) {
+			return `${Math.round(minutes / (24 * 60))}d`;
+		} else if (minutes < 365 * 24 * 60) {
+			return `${Math.round(minutes / (30 * 24 * 60))}mo`;
+		} else {
+			return `${Math.round(minutes / (365 * 24 * 60))}y`;
+		}
+	}
+
 	public async showAnswer() {
 		// console.log("CodeView: showAnswer");
 		try {
@@ -166,12 +209,20 @@ export class AnkiViewViewProvider implements vscode.WebviewViewProvider {
 			${newAnkiHtml}
 			</anki>
 			`;
+
+			// 生成按钮HTML，根据buttons和nextReviews动态生成
+			const buttonLabels = ['Again', 'Hard', 'Good', 'Easy'];
+			let buttonsHtml = '';
+			for (let i = 0; i < card.result.buttons.length; i++) {
+				const ease = card.result.buttons[i];
+				const label = buttonLabels[ease - 1] || `Ease ${ease}`;
+				const reviewTime = card.result.nextReviews[i] ? this.formatReviewTime(card.result.nextReviews[i]) : '';
+				buttonsHtml += `<button class="ankiview-answer-button" id="button-answer-ease${ease}">${label}<br>${reviewTime}</button>\n`;
+			}
+
 			let ctrlHtml = `
 			<div class="ankiview-answer-controller">
-			<button class="ankiview-answer-button" id="button-answer-ease1">Again (1)</button>
-			<button class="ankiview-answer-button" id="button-answer-ease2">Hard (2)</button>
-			<button class="ankiview-answer-button" id="button-answer-ease3">Good (3)</button>
-			<button class="ankiview-answer-button" id="button-answer-ease4">Easy (4)</button>
+			${buttonsHtml}
 			</div>
 			`;
 			let viewHtml = this.mergeViewHtml(cardHtml, ctrlHtml);
