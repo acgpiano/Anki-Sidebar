@@ -368,16 +368,29 @@ export class AnkiViewViewProvider implements vscode.WebviewViewProvider {
 		// 等待Anki切换到下一张卡片
 		let maxRetries = 20;
 		let retryCount = 0;
+		let hasNextCard = false;
 		while (retryCount < maxRetries) {
 			await new Promise(resolve => setTimeout(resolve, 50));
-			let newCard = await this._ankiConnect.api.graphical.guiCurrentCard();
-			if (newCard.result.cardId !== currentCardId) {
+			try {
+				let newCard = await this._ankiConnect.api.graphical.guiCurrentCard();
+				if (newCard.result.cardId !== currentCardId) {
+					hasNextCard = true;
+					break;
+				}
+			} catch (err) {
+				// 如果获取当前卡片失败，说明没有更多卡片了
 				break;
 			}
 			retryCount++;
 		}
 
-		await this.showQuestion();
+		// 只有在有下一张卡片时才调用showQuestion
+		if (hasNextCard) {
+			await this.showQuestion();
+		} else {
+			// 没有更多卡片，显示完成信息
+			await this.error(new Error("No more cards"));
+		}
 		return true;
 	}
 
